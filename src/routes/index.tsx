@@ -99,7 +99,10 @@ function Index() {
     if (!text) return;
     setDraft("");
     const { data, error } = await supabase.from("tasks").insert({ text }).select().single();
-    if (error || !data) return toast.error("Couldn't save the task");
+    if (error || !data) {
+      toast.error("Couldn't save the task");
+      return;
+    }
     setTasks((prev) => [fromRow(data), ...prev]);
   };
 
