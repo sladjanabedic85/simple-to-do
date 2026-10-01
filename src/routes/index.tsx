@@ -1,9 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Task = {
@@ -56,6 +55,7 @@ function Index() {
   const [draft, setDraft] = useState("");
   const [greeting, setGreeting] = useState("Welcome back");
   const [dateLine, setDateLine] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -71,6 +71,10 @@ function Index() {
     setDateLine(now.toLocaleDateString([], { weekday: "long" }) + ", " + now.getDate());
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (authReady && !user) navigate({ to: "/login", replace: true });
+  }, [authReady, user, navigate]);
 
   useEffect(() => {
     if (!user) {
@@ -136,7 +140,7 @@ function Index() {
   const initials = (name || "?").slice(0, 2).toUpperCase();
 
   if (!authReady) return <div className="min-h-screen" />;
-  if (!user) return <AuthPanel />;
+  if (!user) return <div className="min-h-screen" />;
 
   return (
     <div className="relative min-h-screen overflow-hidden font-sans text-foreground">
@@ -326,85 +330,6 @@ function Index() {
             </ul>
           )}
         </section>
-      </div>
-    </div>
-  );
-}
-
-function AuthPanel() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    const { error } =
-      mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: window.location.origin },
-          });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    if (mode === "signup") toast.success("Check your email to confirm your account");
-  };
-
-  const google = async () => {
-    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (res?.error) toast.error("Google sign-in failed");
-  };
-
-  const field =
-    "w-full rounded-2xl border border-input bg-card/70 px-4 py-3.5 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/15";
-
-  return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden px-4 font-sans text-foreground">
-      <div aria-hidden="true" className="pointer-events-none absolute -top-32 -left-16 size-[420px] rounded-full bg-card/70 blur-3xl" />
-      <div aria-hidden="true" className="pointer-events-none absolute top-24 -right-20 size-[380px] rounded-full bg-primary/25 blur-3xl" />
-      <div className="relative w-full max-w-sm rounded-3xl border border-border bg-card/55 p-6 shadow-panel backdrop-blur-2xl">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="grid size-11 place-items-center rounded-2xl bg-card/50 shadow-chip">
-            <span className="block size-4 rounded-[5px] bg-primary" />
-          </div>
-          <div>
-            <p className="text-base font-extrabold leading-none tracking-tight">Clarity</p>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              {mode === "signin" ? "Sign in to see your tasks" : "Create your account"}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={google}
-          className="mb-4 w-full rounded-2xl border border-input bg-card/80 px-4 py-3 text-sm font-bold transition hover:bg-card"
-        >
-          Continue with Google
-        </button>
-        <form onSubmit={submit} className="space-y-3">
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" aria-label="Email" className={field} />
-          <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" aria-label="Password" className={field} />
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-2xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-button transition hover:bg-primary/90 disabled:opacity-60"
-          >
-            {mode === "signin" ? "Sign in" : "Sign up"}
-          </button>
-        </form>
-        <button
-          type="button"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-4 w-full text-center text-xs font-semibold text-muted-foreground hover:text-primary"
-        >
-          {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
-        </button>
       </div>
     </div>
   );
