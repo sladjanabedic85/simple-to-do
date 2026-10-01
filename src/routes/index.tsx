@@ -75,16 +75,20 @@ function Index() {
   useEffect(() => {
     if (!user) {
       setTasks([]);
-      return;
+      return undefined;
     }
     supabase
       .from("tasks")
       .select("*")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
-        if (error) return toast.error("Couldn't load your tasks");
+        if (error) {
+          toast.error("Couldn't load your tasks");
+          return;
+        }
         setTasks((data ?? []).map(fromRow));
       });
+    return undefined;
   }, [user]);
 
   const activeTasks = tasks.filter((t) => !t.completed);
@@ -125,7 +129,7 @@ function Index() {
     }
   };
 
-  const name = (user?.user_metadata?.full_name as string | undefined)?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "";
+  const name = (user?.user_metadata?.['full_name'] as string | undefined)?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "";
   const initials = (name || "?").slice(0, 2).toUpperCase();
 
   if (!authReady) return <div className="min-h-screen" />;
@@ -342,7 +346,10 @@ function AuthPanel() {
             options: { emailRedirectTo: window.location.origin },
           });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     if (mode === "signup") toast.success("Check your email to confirm your account");
   };
 
